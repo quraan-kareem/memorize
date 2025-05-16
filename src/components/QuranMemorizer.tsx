@@ -43,6 +43,7 @@ const QuranMemorizer: React.FC = () => {
     endVerse,
     setVerseRange,
     currentVerse,
+    setCurrentVerse,
     isPlaying,
     repeatCount,
     setRepeatCount,
@@ -108,6 +109,10 @@ const QuranMemorizer: React.FC = () => {
     // For now, we'll just set the current verse and focus the comment field
     if (!currentChapter) return;
     
+    // Set current verse to the selected verse
+    setCurrentVerse(verseId);
+    
+    // Set the marking comment to any existing comment for this verse
     const existingComment = markedVerses[currentChapter.id]?.[verseId] || '';
     setMarkingComment(existingComment);
   };
@@ -895,17 +900,18 @@ const QuranMemorizer: React.FC = () => {
             </>
           )}
 
-          {/* Session Management */}
-          <Paper 
-            elevation={3} 
-            sx={{ 
-              p: { xs: 2, sm: 3 }, 
-              mt: 4, 
-              borderRadius: 2,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-              bgcolor: '#fcfcfc'
-            }}
-          >
+          {/* Session Management - Only visible in teacher mode */}
+          {mode === 'teacher' && (
+            <Paper 
+              elevation={3} 
+              sx={{ 
+                p: { xs: 2, sm: 3 }, 
+                mt: 4, 
+                borderRadius: 2,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                bgcolor: '#fcfcfc'
+              }}
+            >
             <Typography 
               variant="h6" 
               component="h2"
@@ -1115,6 +1121,7 @@ const QuranMemorizer: React.FC = () => {
               </Paper>
             )}
           </Paper>
+          )}
         </>
       )}
     </Container>

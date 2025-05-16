@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useRef, useCallback } from 'react';
 import { Howl } from 'howler';
 import { AppMode, Chapter, Language, SessionData } from '../types';
-import { fetchChapter, fetchChapters, getAudioUrl } from '../utils/api';
+import { fetchChapter, fetchChapters, getAudioUrl, isStorageAvailable } from '../utils/api';
 
 interface AppContextType {
   // App state
@@ -18,6 +18,7 @@ interface AppContextType {
   endVerse: number;
   setVerseRange: (start: number, end: number) => void;
   currentVerse: number;
+  setCurrentVerse: (verse: number) => void;
   
   // Audio control
   isPlaying: boolean;
@@ -123,14 +124,26 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     
     loadChapters();
     
-    // Load saved sessions from localStorage
-    try {
-      const savedSessions = localStorage.getItem('quran-memorizer-sessions');
-      if (savedSessions) {
-        setSessions(JSON.parse(savedSessions));
+    // Load saved sessions and marked verses from localStorage
+    if (isStorageAvailable('localStorage')) {
+      try {
+        const savedSessions = localStorage.getItem('quran-memorizer-sessions');
+        if (savedSessions) {
+          setSessions(JSON.parse(savedSessions));
+        }
+        
+        // Load marked verses from localStorage
+        const savedMarkedVerses = localStorage.getItem('quran-memorizer-marked-verses');
+        if (savedMarkedVerses) {
+          setMarkedVerses(JSON.parse(savedMarkedVerses));
+        }
+      } catch (error) {
+        console.error('Error loading data from localStorage:', error);
       }
-      
-      // Check for session in URL
+    }
+    
+    // Check for session in URL
+    try {
       const urlParams = new URLSearchParams(window.location.search);
       const sessionParam = urlParams.get('session');
       
@@ -161,20 +174,34 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         }
       }
     } catch (error) {
-      console.error('Error loading sessions:', error);
+      console.error('Error checking session in URL:', error);
     }
   }, []);
   
   // Save sessions to localStorage when they change
   useEffect(() => {
-    try {
-      localStorage.setItem('quran-memorizer-sessions', JSON.stringify(sessions));
-    } catch (error) {
-      console.error('Failed to save sessions to localStorage:', error);
+    if (isStorageAvailable('localStorage')) {
+      try {
+        localStorage.setItem('quran-memorizer-sessions', JSON.stringify(sessions));
+      } catch (error) {
+        console.error('Failed to save sessions to localStorage:', error);
+      }
     }
   }, [sessions]);
   
+  // Save marked verses to localStorage when they change
+  useEffect(() => {
+    if (isStorageAvailable('localStorage')) {
+      try {
+        localStorage.setItem('quran-memorizer-marked-verses', JSON.stringify(markedVerses));
+      } catch (error) {
+        console.error('Failed to save marked verses to localStorage:', error);
+      }
+    }
+  }, [markedVerses]);
+  
   // Handle loading session from URL after sessions are loaded
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const sessionToLoad = sessionStorage.getItem('sessionToLoad');
     if (sessionToLoad && sessions.length > 0) {
@@ -540,9 +567,20 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setMarkedVerses(session.markedVerses);
     setCurrentSession(name);
     
-    // Load chapter and set verse range
+    // Load chapter first - but we need to handle setting verse range after chapter is loaded
     setCurrentChapter(session.chapter);
-    setVerseRange(session.startVerse, session.endVerse);
+    
+    // Store the desired verse range for restoration after chapter loads
+    const desiredStartVerse = session.startVerse;
+    const desiredEndVerse = session.endVerse;
+    
+    // Force update for verse range after a small delay to ensure chapter is loaded
+    setTimeout(() => {
+      // Ensure we restore the saved verse range
+      setVerseRange(desiredStartVerse, desiredEndVerse);
+      // Also explicitly set current verse to start verse
+      setCurrentVerse(desiredStartVerse);
+    }, 500);
   };
   
   const exportSession = () => {
@@ -596,6 +634,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     endVerse,
     setVerseRange,
     currentVerse,
+    setCurrentVerse,
     isPlaying,
     repeatCount,
     setRepeatCount,

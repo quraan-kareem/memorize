@@ -184,23 +184,29 @@ const MultiVerseView: React.FC<MultiVerseViewProps> = ({
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
-    if (currentVerseRef.current && scrollContainerRef.current) {
-      const container = scrollContainerRef.current;
-      const element = currentVerseRef.current;
-      
-      // Calculate the scroll position to center the element
-      const elementTop = element.offsetTop;
-      const elementHeight = element.offsetHeight;
-      const containerHeight = container.offsetHeight;
-      
-      const scrollTo = elementTop - (containerHeight / 2) + (elementHeight / 2);
-      
-      container.scrollTo({
-        top: scrollTo,
-        behavior: 'smooth'
-      });
-    }
-  }, [currentVerse]);
+    // Use a small delay to ensure refs are properly set and DOM is updated
+    const scrollTimeout = setTimeout(() => {
+      if (currentVerseRef.current && scrollContainerRef.current) {
+        const container = scrollContainerRef.current;
+        const element = currentVerseRef.current;
+        
+        // Calculate the scroll position to center the element
+        const elementTop = element.offsetTop;
+        const elementHeight = element.offsetHeight;
+        const containerHeight = container.offsetHeight;
+        
+        const scrollTo = elementTop - (containerHeight / 2) + (elementHeight / 2);
+        
+        container.scrollTo({
+          top: scrollTo,
+          behavior: 'smooth'
+        });
+      }
+    }, 100); // Small timeout to ensure DOM is ready
+    
+    // Clean up timeout on unmount or when currentVerse changes
+    return () => clearTimeout(scrollTimeout);
+  }, [currentVerse, verses.length]); // Also re-run when verses array changes
 
   return (
     <Box sx={{ mt: 3 }}>

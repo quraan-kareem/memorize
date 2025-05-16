@@ -4,6 +4,19 @@ import { Chapter, Verse } from '../types';
 const BASE_URL = 'https://cdn.jsdelivr.net/npm/quran-json@3.1.2/dist';
 const AUDIO_BASE_URL = 'https://everyayah.com/data/Alafasy_64kbps';
 
+// Utility function to check if localStorage is available
+export const isStorageAvailable = (type: string): boolean => {
+  try {
+    const storage = window[type as keyof Window];
+    const x = '__storage_test__';
+    storage.setItem(x, x);
+    storage.removeItem(x);
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+
 export const fetchChapters = async (): Promise<Chapter[]> => {
   try {
     const response = await axios.get(`${BASE_URL}/chapters/index.json`);
