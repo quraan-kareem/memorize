@@ -1,4 +1,15 @@
-# Getting Started with Create React App
+# Quran Memorization App
+
+An interactive web application for memorizing the Quran, with features for both students and teachers.
+
+## Features
+
+- **Student Mode**: Listen to verses with customizable repetition settings
+- **Teacher Mode**: Provide feedback on student recitations
+- **Verse Selection**: Choose specific verses or ranges to memorize
+- **Audio Playback**: High-quality Quranic recitation
+- **Session Management**: Save and load memorization sessions
+- **Sharing**: Share sessions with others via URL
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 

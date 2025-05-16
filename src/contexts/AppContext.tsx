@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef, useCallback } from 'react';
 import { Howl } from 'howler';
-import { AppMode, Chapter, Language, SessionData, Verse } from '../types';
-import { fetchChapter, fetchChapters, getAudioUrl, getGlobalVerseNumber } from '../utils/api';
+import { AppMode, Chapter, Language, SessionData } from '../types';
+import { fetchChapter, fetchChapters, getAudioUrl } from '../utils/api';
 
 interface AppContextType {
   // App state
@@ -93,6 +93,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [repeatCount, setRepeatCount] = useState(0); // 0 = infinite
   const [currentRepeats, setCurrentRepeats] = useState(0);
   
+  // Use ref for functions to avoid dependency cycles
+  const handlePlaybackEndRef = useRef<() => void>(() => {});
+  const loadAudioRef = useRef<(chapter: number, verse: number) => Howl>(() => new Howl({src: ['']}));
+  
   // Teacher mode
   const [markedVerses, setMarkedVerses] = useState<{
     [chapter: number]: {
@@ -147,11 +151,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
               return [...prev, sessionData];
             });
             
-            // Load the session after a short delay to ensure it's saved
-            setTimeout(() => {
-              const nameToLoad = sessionData.name;
-              loadSession(nameToLoad);
-            }, 500);
+            // We'll handle loading the session in a separate useEffect
+            const savedSessionName = sessionData.name;
+            // Store the session name to load in sessionStorage 
+            sessionStorage.setItem('sessionToLoad', savedSessionName);
           }
         } catch (parseError) {
           console.error('Failed to parse session from URL', parseError);
@@ -168,6 +171,21 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       localStorage.setItem('quran-memorizer-sessions', JSON.stringify(sessions));
     } catch (error) {
       console.error('Failed to save sessions to localStorage:', error);
+    }
+  }, [sessions]);
+  
+  // Handle loading session from URL after sessions are loaded
+  useEffect(() => {
+    const sessionToLoad = sessionStorage.getItem('sessionToLoad');
+    if (sessionToLoad && sessions.length > 0) {
+      // Find the session in our loaded sessions
+      const session = sessions.find(s => s.name === sessionToLoad);
+      if (session) {
+        // Load the session
+        loadSession(sessionToLoad);
+        // Clear the stored name to prevent reloading
+        sessionStorage.removeItem('sessionToLoad');
+      }
     }
   }, [sessions]);
   
@@ -188,12 +206,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     
     // If playing, ensure we're playing the correct verse
-    if (isPlaying && currentChapter) {
+    if (isPlaying && currentChapter && loadAudioRef.current) {
       console.log(`Updating audio to play current verse ${currentVerse}`);
-      const freshHowl = loadAudio(currentChapter.id, currentVerse);
+      const freshHowl = loadAudioRef.current(currentChapter.id, currentVerse);
       freshHowl.play();
     }
-  }, [startVerse, endVerse, currentVerse]);
+  }, [startVerse, endVerse, currentVerse, isPlaying, currentChapter]);
   
   // Set current chapter
   const setCurrentChapter = async (chapterNumber: number) => {
@@ -242,14 +260,14 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     if (currentChapter) {
       // Small delay to ensure state updates have completed
       setTimeout(() => {
-        const freshHowl = loadAudio(currentChapter.id, start);
+        const freshHowl = loadAudioRef.current(currentChapter.id, start);
         console.log(`Preloaded audio for chapter ${currentChapter.id}, verse ${start}`);
       }, 100);
     }
   };
   
   // Audio playback functions
-  const loadAudio = (chapter: number, verse: number) => {
+  const loadAudio = useCallback((chapter: number, verse: number) => {
     console.log(`Loading audio for chapter ${chapter}, verse ${verse}`);
     
     // Stop any existing audio
@@ -262,7 +280,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     const newHowl = new Howl({
       src: [getAudioUrl(chapter, verse)],
       html5: true,
-      onend: handlePlaybackEnd,
+      onend: handlePlaybackEndRef.current,
       onload: () => {
         console.log(`Successfully loaded audio for chapter ${chapter}, verse ${verse}`);
       },
@@ -289,7 +307,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     // Update state with the new Howl instance
     setHowl(newHowl);
     return newHowl;
-  };
+  }, [howl, isPlaying]);
+  
+  // Store loadAudio in ref
+  loadAudioRef.current = loadAudio;
   
   const playPause = () => {
     if (!currentChapter) return;
@@ -320,7 +341,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setCurrentRepeats(0);
     
     // Load and play the previous verse
-    const newHowl = loadAudio(currentChapter.id, prevVerse);
+    const newHowl = loadAudioRef.current(currentChapter.id, prevVerse);
     newHowl.play();
     setIsPlaying(true);
   };
@@ -333,13 +354,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setCurrentRepeats(0);
     
     // Load and play the next verse
-    const newHowl = loadAudio(currentChapter.id, nextVerse);
+    const newHowl = loadAudioRef.current(currentChapter.id, nextVerse);
     newHowl.play();
     setIsPlaying(true);
   };
   
   // This function handles what happens when a verse finishes playing
-  const handlePlaybackEnd = () => {
+  const handlePlaybackEnd = useCallback(() => {
     if (!currentChapter) return;
     
     console.log(`Playback ended - Current verse: ${currentVerse}, Start: ${startVerse}, End: ${endVerse}, Current repeats: ${currentRepeats}, Repeat count: ${repeatCount}`);
@@ -364,7 +385,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
           const freshHowl = new Howl({
             src: [getAudioUrl(latestChapter.id, verseToPlay)],
             html5: true,
-            onend: handlePlaybackEnd,
+            onend: handlePlaybackEndRef.current,
             onloaderror: () => console.error(`Error loading audio for verse ${verseToPlay}`),
             onplayerror: () => console.error(`Error playing audio for verse ${verseToPlay}`)
           });
@@ -403,7 +424,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
           const freshHowl = new Howl({
             src: [getAudioUrl(latestChapter.id, verseToPlay)],
             html5: true,
-            onend: handlePlaybackEnd,
+            onend: handlePlaybackEndRef.current,
             onloaderror: () => console.error(`Error loading audio for verse ${verseToPlay}`),
             onplayerror: () => console.error(`Error playing audio for verse ${verseToPlay}`)
           });
@@ -415,7 +436,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     
     // Execute immediately to avoid state timing issues
     handleNextAction();
-  };
+  }, [currentChapter, currentVerse, startVerse, endVerse, currentRepeats, repeatCount, stop]);
   
   // Helper function to handle moving to the next verse or looping back
   const proceedToNextVerse = (chapterId: number, currentVerseNum: number, rangeStart: number, rangeEnd: number) => {
@@ -435,7 +456,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       const freshHowl = new Howl({
         src: [getAudioUrl(chapterId, nextVerse)],
         html5: true,
-        onend: handlePlaybackEnd,
+        onend: handlePlaybackEndRef.current,
         onloaderror: () => console.error(`Error loading audio for verse ${nextVerse}`),
         onplayerror: () => console.error(`Error playing audio for verse ${nextVerse}`)
       });
@@ -452,7 +473,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         const freshHowl = new Howl({
           src: [getAudioUrl(chapterId, rangeStart)],
           html5: true,
-          onend: handlePlaybackEnd,
+          onend: handlePlaybackEndRef.current,
           onloaderror: () => console.error(`Error loading audio for verse ${rangeStart}`),
           onplayerror: () => console.error(`Error playing audio for verse ${rangeStart}`)
         });
@@ -560,6 +581,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
   };
   
+  // Update the handlePlaybackEnd ref after the function is defined
+  handlePlaybackEndRef.current = handlePlaybackEnd;
+
   const value: AppContextType = {
     mode,
     setMode,

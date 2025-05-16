@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Paper, IconButton, Stack } from '@mui/material';
+import { Box, Typography, Paper, IconButton } from '@mui/material';
 import { Verse } from '../types';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
