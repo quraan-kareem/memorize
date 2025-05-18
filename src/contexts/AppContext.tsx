@@ -239,6 +239,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       freshHowl.play();
     }
   }, [startVerse, endVerse, currentVerse, isPlaying, currentChapter]);
+
+  // Refetch chapter when language changes to update translation
+  useEffect(() => {
+    if (currentChapter) {
+      fetchChapter(currentChapter.id, language).then((data) => {
+        setCurrentChapterState(data);
+      });
+    }
+  }, [language]);
   
   // Set current chapter
   const setCurrentChapter = async (chapterNumber: number) => {

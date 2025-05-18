@@ -45,14 +45,13 @@ export const fetchChapter = async (chapterNumber: number, language: string = 'en
         if (translationData && translationData.verses) {
           baseChapter.verses = baseChapter.verses.map((verse: Verse, index: number) => {
             const translationVerse = translationData.verses[index];
-            if (translationVerse) {
-              return {
-                ...verse,
-                translations: {
-                  ...verse.translations,
-                  [language]: translationVerse.text
-                }
-              };
+            if (translationVerse) {                return {
+                    ...verse,
+                    translations: {
+                      ...verse.translations,
+                      [language]: translationVerse.translation || translationVerse.text
+                    }
+                  };
             }
             return verse;
           });
@@ -74,7 +73,7 @@ export const fetchChapter = async (chapterNumber: number, language: string = 'en
                     ...verse,
                     translations: {
                       ...verse.translations,
-                      en: enVerse.text
+                      en: enVerse.translation || enVerse.text
                     }
                   };
                 }
