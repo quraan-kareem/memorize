@@ -343,12 +343,13 @@ const QuranMemorizer: React.FC = () => {
                 {/* Chapter Selection */}
                 <Box>
                   <FormControl fullWidth size="small">
-                    <InputLabel>Chapter</InputLabel>
+                    <InputLabel shrink>Chapter</InputLabel>
                     <Select
                       value={currentChapter?.id || ''}
                       label="Chapter"
                       onChange={handleChapterChange}
                       displayEmpty
+                      inputProps={{ 'aria-label': 'Select chapter' }}
                       MenuProps={{
                         PaperProps: {
                           style: {
