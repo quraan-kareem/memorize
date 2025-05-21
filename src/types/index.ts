@@ -31,7 +31,7 @@ export interface SessionData {
   endVerse: number;
   mode: 'student' | 'teacher';
   language: string;
-  reciter: number;
+  reciter: string; // reciter key from AUDIO_BASE_URLS
   repeat: number;
   markedVerses: {
     [chapter: number]: {

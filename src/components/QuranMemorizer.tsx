@@ -29,6 +29,7 @@ import { useApp } from '../contexts/AppContext';
 import VerseDisplay from './VerseDisplay';
 import MultiVerseView from './MultiVerseView';
 import { Language } from '../types';
+import { AUDIO_BASE_URLS } from '../utils/api';
 
 const QuranMemorizer: React.FC = () => {
   const {
@@ -59,7 +60,9 @@ const QuranMemorizer: React.FC = () => {
     loadSession,
     exportSession,
     importSession,
-    isLoading
+    isLoading,
+    reciter,
+    setReciter
   } = useApp();
 
   // Local state
@@ -94,6 +97,11 @@ const QuranMemorizer: React.FC = () => {
   // Handle repeat selection
   const handleRepeatChange = (event: SelectChangeEvent<number>) => {
     setRepeatCount(Number(event.target.value));
+  };
+
+  // Handle reciter selection
+  const handleReciterChange = (event: any) => {
+    setReciter(event.target.value);
   };
 
   // Handle marking a verse
@@ -327,15 +335,20 @@ const QuranMemorizer: React.FC = () => {
                   </FormControl>
                 </Box>
 
-                {/* Reciter Selection (disabled for now) */}
+                {/* Reciter Selection */}
                 <Box>
-                  <FormControl fullWidth size="small" disabled>
+                  <FormControl fullWidth size="small">
                     <InputLabel>Reciter</InputLabel>
                     <Select
-                      value={0}
+                      value={reciter}
                       label="Reciter"
+                      onChange={handleReciterChange}
                     >
-                      <MenuItem value={0}>Mishary Rashid Alafasy</MenuItem>
+                      {Object.entries(AUDIO_BASE_URLS).map(([key, url]) => (
+                        <MenuItem key={key} value={key}>
+                          {key.replace(/_/g, ' ')}
+                        </MenuItem>
+                      ))}
                     </Select>
                   </FormControl>
                 </Box>

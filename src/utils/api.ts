@@ -2,7 +2,13 @@ import axios from 'axios';
 import { Chapter, Verse } from '../types';
 
 const BASE_URL = 'https://cdn.jsdelivr.net/npm/quran-json@3.1.2/dist';
-const AUDIO_BASE_URL = 'https://everyayah.com/data/Alafasy_64kbps';
+
+// Define a dictionary of reciters and their audio base URLs
+export const AUDIO_BASE_URLS: { [reciter: string]: string } = {
+  'Mishary Alafasy': 'https://everyayah.com/data/Alafasy_64kbps',
+  'Abdullah Basfar': 'https://everyayah.com/data/Abdullah_Basfar_192kbps/',
+  // Add more reciters here as needed
+};
 
 // Utility function to check if localStorage is available
 export const isStorageAvailable = (type: string): boolean => {
@@ -132,12 +138,12 @@ export const getGlobalVerseNumber = (chapter: number, verse: number): number => 
 };
 
 // Get audio URL for a specific verse
-export const getAudioUrl = (chapter: number, verse: number): string => {
+export const getAudioUrl = (chapter: number, verse: number, reciter: string = 'Alafasy_64kbps'): string => {
   // Format chapter and verse numbers with leading zeros
   const formattedChapter = chapter.toString().padStart(3, '0');
   const formattedVerse = verse.toString().padStart(3, '0');
-  
-  return `${AUDIO_BASE_URL}/${formattedChapter}${formattedVerse}.mp3`;
+  const baseUrl = AUDIO_BASE_URLS[reciter] || AUDIO_BASE_URLS['Alafasy_64kbps'];
+  return `${baseUrl}/${formattedChapter}${formattedVerse}.mp3`;
 };
 
 // Get chapter and verse from global verse number

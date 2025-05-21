@@ -28,6 +28,8 @@ interface AppContextType {
   stop: () => void;
   playPrevious: () => void;
   playNext: () => void;
+  reciter: string;
+  setReciter: (reciter: string) => void;
   
   // Teacher mode
   markedVerses: {
@@ -93,6 +95,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [repeatCount, setRepeatCount] = useState(0); // 0 = infinite
   const [currentRepeats, setCurrentRepeats] = useState(0);
+  const [reciter, setReciter] = useState<string>('Abdullah Basfar');
   
   // Use ref for functions to avoid dependency cycles
   const handlePlaybackEndRef = useRef<() => void>(() => {});
@@ -304,7 +307,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   
   // Audio playback functions
   const loadAudio = useCallback((chapter: number, verse: number) => {
-    console.log(`Loading audio for chapter ${chapter}, verse ${verse}`);
+    console.log(`Loading audio for chapter ${chapter}, verse ${verse}, reciter ${reciter}`);
     
     // Stop any existing audio
     if (howl) {
@@ -314,26 +317,26 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     
     // Create new Howl instance with better error handling
     const newHowl = new Howl({
-      src: [getAudioUrl(chapter, verse)],
+      src: [getAudioUrl(chapter, verse, reciter)],
       html5: true,
       onend: handlePlaybackEndRef.current,
       onload: () => {
-        console.log(`Successfully loaded audio for chapter ${chapter}, verse ${verse}`);
+        console.log(`Successfully loaded audio for chapter ${chapter}, verse ${verse}, reciter ${reciter}`);
       },
       onloaderror: (id, error) => {
-        console.error(`Error loading audio for chapter ${chapter}, verse ${verse}:`, error);
+        console.error(`Error loading audio for chapter ${chapter}, verse ${verse}, reciter ${reciter}:`, error);
         // Attempt recovery if loading fails
         setTimeout(() => {
-          console.log(`Attempting to reload audio for chapter ${chapter}, verse ${verse}`);
+          console.log(`Attempting to reload audio for chapter ${chapter}, verse ${verse}, reciter ${reciter}`);
           newHowl.load();
         }, 1000);
       },
       onplayerror: (id, error) => {
-        console.error(`Error playing audio for chapter ${chapter}, verse ${verse}:`, error);
+        console.error(`Error playing audio for chapter ${chapter}, verse ${verse}, reciter ${reciter}:`, error);
         // Attempt recovery if playback fails
         if (isPlaying) {
           setTimeout(() => {
-            console.log(`Attempting to replay audio for chapter ${chapter}, verse ${verse}`);
+            console.log(`Attempting to replay audio for chapter ${chapter}, verse ${verse}, reciter ${reciter}`);
             newHowl.play();
           }, 1000);
         }
@@ -343,7 +346,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     // Update state with the new Howl instance
     setHowl(newHowl);
     return newHowl;
-  }, [howl, isPlaying]);
+  }, [howl, isPlaying, reciter]);
   
   // Store loadAudio in ref
   loadAudioRef.current = loadAudio;
@@ -419,7 +422,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
           
           // Create fresh audio to avoid any stale references
           const freshHowl = new Howl({
-            src: [getAudioUrl(latestChapter.id, verseToPlay)],
+            src: [getAudioUrl(latestChapter.id, verseToPlay, reciter)],
             html5: true,
             onend: handlePlaybackEndRef.current,
             onloaderror: () => console.error(`Error loading audio for verse ${verseToPlay}`),
@@ -458,7 +461,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
           
           // Create fresh audio to avoid any stale references
           const freshHowl = new Howl({
-            src: [getAudioUrl(latestChapter.id, verseToPlay)],
+            src: [getAudioUrl(latestChapter.id, verseToPlay, reciter)],
             html5: true,
             onend: handlePlaybackEndRef.current,
             onloaderror: () => console.error(`Error loading audio for verse ${verseToPlay}`),
@@ -472,7 +475,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     
     // Execute immediately to avoid state timing issues
     handleNextAction();
-  }, [currentChapter, currentVerse, startVerse, endVerse, currentRepeats, repeatCount, stop]);
+  }, [currentChapter, currentVerse, startVerse, endVerse, currentRepeats, repeatCount, reciter, stop]);
   
   // Helper function to handle moving to the next verse or looping back
   const proceedToNextVerse = (chapterId: number, currentVerseNum: number, rangeStart: number, rangeEnd: number) => {
@@ -490,7 +493,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       
       // Load and play the next verse - create fresh Howl to avoid stale references
       const freshHowl = new Howl({
-        src: [getAudioUrl(chapterId, nextVerse)],
+        src: [getAudioUrl(chapterId, nextVerse, reciter)],
         html5: true,
         onend: handlePlaybackEndRef.current,
         onloaderror: () => console.error(`Error loading audio for verse ${nextVerse}`),
@@ -507,7 +510,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         
         // Create fresh Howl to avoid stale references
         const freshHowl = new Howl({
-          src: [getAudioUrl(chapterId, rangeStart)],
+          src: [getAudioUrl(chapterId, rangeStart, reciter)],
           html5: true,
           onend: handlePlaybackEndRef.current,
           onloaderror: () => console.error(`Error loading audio for verse ${rangeStart}`),
@@ -545,7 +548,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       endVerse,
       mode,
       language,
-      reciter: 0, // Currently only supporting Mishary
+      reciter,
       repeat: repeatCount,
       markedVerses
     };
@@ -572,6 +575,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     
     setMode(session.mode as AppMode);
     setLanguage(session.language as Language);
+    setReciter(session.reciter || 'Alafasy_64kbps');
     setRepeatCount(session.repeat);
     setMarkedVerses(session.markedVerses);
     setCurrentSession(name);
@@ -616,6 +620,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       // Load the imported session
       setMode(session.mode as AppMode);
       setLanguage(session.language as Language);
+      setReciter(session.reciter || 'Alafasy_64kbps');
       setRepeatCount(session.repeat);
       setMarkedVerses(session.markedVerses);
       setCurrentSession(session.name);
@@ -651,6 +656,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     stop,
     playPrevious,
     playNext,
+    reciter,
+    setReciter,
     markedVerses,
     markVerse,
     sessions,
