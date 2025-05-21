@@ -87,7 +87,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   
   // Verse selection and playback
   const [startVerse, setStartVerse] = useState(1);
-  const [endVerse, setEndVerse] = useState(1);
+  const [endVerse, setEndVerse] = useState(5);
   const [currentVerse, setCurrentVerse] = useState(1);
   
   // Audio control
@@ -260,9 +260,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       if (data && data.verses) {
         setCurrentChapterState(data);
         
-        // Reset verse range to first verse
+        // Reset verse range to first 5 verses (or fewer if the chapter has less than 5 verses)
         setStartVerse(1);
-        setEndVerse(1);
+        const defaultEndVerse = Math.min(5, data.total_verses);
+        setEndVerse(defaultEndVerse);
         setCurrentVerse(1);
         
         // Stop any playing audio
